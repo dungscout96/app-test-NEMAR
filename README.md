@@ -19,4 +19,3 @@ docker pull arnodelorme/octave-eeglab:1.2
 Dockerfile  - docker configuration
 main        - brainlife executable
 config.json - provided by brainlife
-
