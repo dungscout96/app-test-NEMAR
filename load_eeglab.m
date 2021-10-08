@@ -1,4 +1,5 @@
 function load_eeglab()
-addpath('/home/octave/eeglab');
+addpath('eeglab');
+addpath('JSONio');
 eeglab nogui;
 end
