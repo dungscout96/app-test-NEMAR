@@ -1,21 +1,16 @@
-# Docker commands
-docker login
+# app-test-NEMAR
+Example NEMAR pipeline
 
-docker pull dtyoung/eeglab-pipeline:1.1
-docker image list
-docker run fce893a28159 ./app.m eeglab_data_epochs_ica.set
+To test:
+```
+git clone https://github.com/dungscout96/app-test-NEMAR.git
+cd app-test-NEMAR
+./main
+```
 
+The pipeline runs on a Docker container via Singularity. 
 
-# Git clone
-https://github.com/dungscout96/app-test-brainlife
-docker build -t eeglab-octave:1.2 .
-
-docker tag octave-eeglab:1.2 arnodelorme/octave-eeglab:1.2
-docker tag eeglab-octave:1.2 arnodelorme/eeglab-octave:1.2
-docker push arnodelorme/eeglab-octave:1.2
-docker pull arnodelorme/octave-eeglab:1.2
-
-# Files 
-Dockerfile  - docker configuration
-main        - brainlife executable
-config.json - provided by brainlife
+## Files
+- `main`: the entrypoint script
+- `config-dataqual.json`: specifying path to BIDS dataset on and datasetID
+- `bids_dataqual.m`: main pipeline script
