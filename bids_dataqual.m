@@ -3,6 +3,10 @@ load_eeglab()
 
 arg_list = argv();
 filepath = arg_list{1};
+outpath = '';
+if numel(arg_list) > 1
+    outpath = arg_list{2};
+end
 %filepath = dataset;%'/Volumes/LaCie/BIDS/ds002718-download';
 modeval = 'import';
 modeval = 'read';
@@ -11,7 +15,12 @@ tic;
 
 %filepath = pwd;
 [root_dir,dsname] = fileparts(filepath);
-outputDir = fullfile(root_dir, 'processed', dsname);
+if ~isempty(outpath)
+    outputDir = fullfile(outpath, dsname);
+else
+    outputDir = fullfile(root_dir, 'processed', dsname);
+end
+disp(['outputdir ' outputDir]);
 
 %filepath = '/Users/arno/temp/BIDS_export_p300/BIDS_EXPORT';
 %filepath = '/data/data/STUDIES/BIDS_hw';
@@ -21,13 +30,13 @@ outputDir = fullfile(root_dir, 'processed', dsname);
 % read or import data
 %pop_editoptions( 'option_storedisk', 1);
 useBidsChans = { 'ds002718' 'ds003190' 'ds002578' 'ds002887' 'ds003004' 'ds002833' 'ds002691' 'ds002791' 'ds001787' };
-studyFile = fullfile(outputDir, 'temp.study');
+studyFile = fullfile(outputDir, [dsname '.study']);
 if ~exist(studyFile, 'file') || strcmpi(modeval, 'import')
     if exist(outputDir)
         system([ 'rm -r --force ' outputDir ]);
     end
     if ismember(dsname, useBidsChans), bidsChan = 'on'; else bidsChan = 'off'; end
-    [STUDY, ALLEEG] = pop_importbids(filepath, 'bidsevent','off','bidschanloc', bidsChan,'studyName','temp','outputdir', outputDir);
+    [STUDY, ALLEEG] = pop_importbids(filepath, 'bidsevent','off','bidschanloc', bidsChan,'studyName',dsname,'outputdir', outputDir);
 else
     tic
     [STUDY, ALLEEG] = pop_loadstudy(studyFile);
@@ -105,6 +114,7 @@ for iDat = 1:length(ALLEEG)
                     EEG = pop_iclabel(EEG,'default');
                     EEG = pop_icflag(EEG,[0.6 1;NaN NaN;NaN NaN;NaN NaN;NaN NaN;NaN NaN;NaN NaN]);
                     
+		    disp(fullfile(EEG.filepath, processedEEG));
                     pop_saveset(EEG, fullfile(EEG.filepath, processedEEG));
                 catch
                     l = lasterror

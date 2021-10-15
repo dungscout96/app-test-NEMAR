@@ -10,6 +10,7 @@ mount_dir="/mnt"
 #parse config.json for input parameters (here, we are pulling "t1")
 data_dir=$(jq -r .dir config-dataqual.json)
 datasetID=$(jq -r .dataset config-dataqual.json)
+out_dir=$(jq -r .outdir config-dataqual.json)
 data_path="$mount_dir/$datasetID"
 echo $data_path
-singularity exec --bind $data_dir:$mount_dir -e docker://dtyoung/eeglab-pipeline:eeglab octave-cli ./bids_dataqual.m $data_path
+singularity exec --bind $data_dir:$mount_dir -e docker://dtyoung/eeglab-pipeline:eeglab octave-cli ./bids_dataqual.m $data_path $out_dir
