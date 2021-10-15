@@ -1,4 +1,3 @@
-function bids_dataqual(dataset)
 load_eeglab()
 
 arg_list = argv();
