@@ -1,11 +1,12 @@
-load_eeglab()
-
 arg_list = argv();
-filepath = arg_list{1};
-outpath = '';
-if numel(arg_list) > 1
-    outpath = arg_list{2};
+if numel(arg_list) < 3
+    error('bids_dataqual takes three arguments: path to bids dataset, output path, and path to code root');
 end
+filepath = arg_list{1};
+outpath = arg_list{2};
+root_path = arg_list{3};
+addpath(root_path);
+load_eeglab(root_path);
 %filepath = dataset;%'/Volumes/LaCie/BIDS/ds002718-download';
 modeval = 'import';
 modeval = 'read';
