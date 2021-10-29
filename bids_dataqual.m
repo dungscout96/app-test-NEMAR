@@ -187,7 +187,7 @@ res.goodICA   = sprintf('%1.1f-%1.1f', ciBrain(1)*100, ciBrain(2)*100);
 res.asrFail   = sprintf('%d/%d', sum(asrFail), length(asrFail));
 res.icaFail   = sprintf('%d/%d', sum(icaFail), length(icaFail));
 
-fid = fopen(fullfile(filepath, 'result.txt'), 'w');
+fid = fopen(fullfile(outputDir, 'dataqual.txt'), 'w');
 if fid ~= -1
     fprintf(fid, '%s\n', res.timeSec);
     fprintf(fid, '%s\n', res.timeHours);
@@ -200,7 +200,7 @@ if fid ~= -1
     fclose(fid);
 end
 
-fid = fopen(fullfile(filepath, 'result.json' ), 'w');
+fid = fopen(fullfile(outputDir, 'dataqual.json' ), 'w');
 if fid ~= -1
     fprintf(fid, '%s\n', jsonwrite(res));
     fclose(fid);
