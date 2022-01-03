@@ -42,3 +42,6 @@ $ docker run --rm -it octavedock script_test.m arg1  # Run the example file
 - Spectrum in SVG format
 - Figure in SVG format 
 - Generate SVG format from Matlab and show it in the page
+
+## BIDS derivative
+- Are the generated processed datasets compatible with BIDS derivative
