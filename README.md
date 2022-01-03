@@ -36,3 +36,9 @@ Run the script file directly (for a modified version that would include the sign
 ```
 $ docker run --rm -it octavedock script_test.m arg1  # Run the example file
 ```
+
+## What to save
+- ICA component maps in SVG format
+- Spectrum in SVG format
+- Figure in SVG format 
+- Generate SVG format from Matlab and show it in the page
