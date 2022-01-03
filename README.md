@@ -17,7 +17,7 @@ The pipeline runs on a Docker container via Singularity.
 
 ## Docker execution
 
-A simple docker application running Octave and some EEGLAB scripts.
+A simple docker application running Octave and some EEGLAB scripts. See also an older project https://github.com/sccn/nemar_tool_proof_of_concept
 
 Usage
 ```
