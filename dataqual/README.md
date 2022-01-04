@@ -1,3 +1,7 @@
+# Repository content
+- Code used for the paper now obsolete https://pubmed.ncbi.nlm.nih.gov/32289453/
+- Kept for backup purpose, do not modify
+
 # Pre-requisite
 - EEGLAB installed with the following plugins
   - Default plugins (firfilt, clean_rawdata, ICAlabel)
