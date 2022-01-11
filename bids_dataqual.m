@@ -1,10 +1,8 @@
-arg_list = argv();
-if numel(arg_list) < 3
+function bids_dataqual(filepath, outpath, root_path);
+
+if nargin < 3
     error('bids_dataqual takes three arguments: path to bids dataset, output path, and path to code root');
 end
-filepath = arg_list{1};
-outpath = arg_list{2};
-root_path = arg_list{3};
 addpath(root_path);
 load_eeglab(root_path);
 %filepath = dataset;%'/Volumes/LaCie/BIDS/ds002718-download';
@@ -69,7 +67,7 @@ for iDat = 1:length(ALLEEG)
         % check channel locations
         % remove non-EEG channels
         disp('Selecting channels based on type...');
-	dipfit_path = fileparts(which('pop_dipplot'));
+        dipfit_path = fileparts(which('pop_dipplot'));
         chanfile = [dipfit_path '/standard_BEM/elec/standard_1005.elc'];
         if ~exist(chanfile,'file')
             chanfile = '/home/octave/eeglab/plugins/dipfit4.0/standard_BEM/elec/standard_1005.elc';
@@ -86,18 +84,18 @@ for iDat = 1:length(ALLEEG)
         end
         notEmpty = ~cellfun(@isempty,  { EEG.chanlocs.theta });
         EEG = pop_select(EEG, 'channel', find(notEmpty));
-       
+        
         % resample ds002336
         if EEG.srate == 5000
             EEG = pop_resample(EEG, 250); % instead of 5000 Hz (ds002336 and ds002338)
         end
- 
+        
         % remove DC
         disp('Remove DC');
         EEG = pop_rmbase(EEG, [EEG.times(1) EEG.times(end)]);
         EEG.etc.orinbchan = EEG.nbchan;
         EEG.etc.oripnts   = EEG.pnts;
-
+        
         if any(any(EEG.data')) % not all data is 0
             % remove bad channels
             disp('Call clean_rawdata...');
@@ -105,7 +103,7 @@ for iDat = 1:length(ALLEEG)
                 EEGTMP = pop_clean_rawdata( EEG,'FlatlineCriterion',5,'ChannelCriterion',0.8,'LineNoiseCriterion',4,'Highpass',[0.25 0.75] ,...
                     'BurstCriterion',20,'WindowCriterion',0.25,'BurstRejection','on','Distance','Euclidian','WindowCriterionTolerances',[-Inf 7] );
                 EEG = EEGTMP;
-
+                
                 % run ICA and IC label
                 %if ~isempty(EEG.chanlocs) && isfield(EEG.chanlocs, 'X') && ~isempty(EEG.chanlocs(1).X)
                 try
@@ -114,7 +112,7 @@ for iDat = 1:length(ALLEEG)
                     EEG = pop_iclabel(EEG,'default');
                     EEG = pop_icflag(EEG,[0.6 1;NaN NaN;NaN NaN;NaN NaN;NaN NaN;NaN NaN;NaN NaN]);
                     
-		    disp(fullfile(EEG.filepath, processedEEG));
+                    disp(fullfile(EEG.filepath, processedEEG));
                     pop_saveset(EEG, fullfile(EEG.filepath, processedEEG));
                 catch
                     l = lasterror
