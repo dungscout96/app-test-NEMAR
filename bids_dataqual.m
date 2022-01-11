@@ -104,13 +104,41 @@ for iDat = 1:length(ALLEEG)
                     'BurstCriterion',20,'WindowCriterion',0.25,'BurstRejection','on','Distance','Euclidian','WindowCriterionTolerances',[-Inf 7] );
                 EEG = EEGTMP;
                 
+                % save EEGPLOT
+                % ------------
+                bounds = strmatch('boundary', { EEG.event.type });
+                startLat = 1;
+                if ~isempty(bounds)
+                    boundLat = [ EEG.event(bounds).latency ];
+                    diffLat = diff(boundLat);
+                    indLat = find(diffLat > EEG.srate*2); % 2 seconds of good data
+                    if ~isempty(indLat)
+                        startLat = boundLat(indLat(1));
+                    end
+                end           
+                eegplot(EEG.data(:,startLat:startLat+EEG.srate*2), 'srate', EEG.srate, ...
+                    'winlength', 2, 'eloc_file', EEG.chanlocs, 'noui', 'on'); 
+                textsc(['Dataset ' EEG.filename ' (2 seconds)' ], 'title');
+                h = findall(gcf,'-property','FontName');
+                set(h,'FontName','San Serif');
+                print(gcf,'-dsvg',fullfile(EEG.filepath, 'eegplot.svg'))
+                close
+
                 % run ICA and IC label
                 %if ~isempty(EEG.chanlocs) && isfield(EEG.chanlocs, 'X') && ~isempty(EEG.chanlocs(1).X)
                 try
                     EEG = pop_reref(EEG, []);
-                    EEG = pop_runica(EEG, 'icatype','picard','options',{'pca',EEG.nbchan-1});
+                    EEG = pop_runamica(EEG,'numprocs',1, 'do_reject', 1, 'numrej', 5, 'rejint', 4,'rejsig', 3,'rejstart', 1, 'pcakeep',EEG.nbchan-1); % Computing ICA with AMICA
+                    rmdir( fullfile(EEG.filepath, 'amicaout'), 's');
+                    % EEG = pop_runica(EEG, 'icatype','picard','options',{'pca',EEG.nbchan-1});
                     EEG = pop_iclabel(EEG,'default');
                     EEG = pop_icflag(EEG,[0.6 1;NaN NaN;NaN NaN;NaN NaN;NaN NaN;NaN NaN;NaN NaN]);
+                    
+                    % Save IC Label image
+                    % -------------------
+                    pop_viewprops( EEG, 0, [1:min(EEG.nbchan-1,32)], {'freqrange', [2 64]}, {}, 1, 'ICLabel' )
+                    print(gcf,'-dsvg',fullfile(EEG.filepath,'icamaps.svg'))
+                    close
                     
                     disp(fullfile(EEG.filepath, processedEEG));
                     pop_saveset(EEG, fullfile(EEG.filepath, processedEEG));
@@ -121,6 +149,11 @@ for iDat = 1:length(ALLEEG)
                     end
                     icaFail(iDat) = 1;
                 end
+                
+                figure; pop_spectopo(EEG, 1, [0 EEG.pnts/EEG.srate*1000], 'EEG' , 'freq', [6 10 22], 'freqrange',[0 EEG.srate/2],'electrodes','off');
+                print(gcf,'-dsvg',fullfile(EEG.filepath,'spectrum.svg'));
+                close
+                
             catch
                 l = lasterror
                 for iL = 1:length(l.stack)
