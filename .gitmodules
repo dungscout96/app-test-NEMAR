@@ -1,0 +1,6 @@
+[submodule "eeglab"]
+	path = eeglab
+	url = git@github.com:sccn/eeglab.git
+[submodule "plugins/amica"]
+	path = plugins/amica
+	url = git@github.com:japalmer29/amica.git
