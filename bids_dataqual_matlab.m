@@ -1,10 +1,4 @@
-arg_list = argv();
-if numel(arg_list) < 3
-    error('bids_dataqual takes three arguments: path to bids dataset, output path, and path to code root');
-end
-filepath = arg_list{1};
-outpath = arg_list{2};
-root_path = arg_list{3};
+function bids_dataqual_matlab(filepath, outpath, root_path)
 addpath(root_path);
 load_eeglab(root_path);
 %filepath = dataset;%'/Volumes/LaCie/BIDS/ds002718-download';
@@ -51,8 +45,14 @@ percentDataRejected = zeros(1, length(ALLEEG))*NaN;
 percentBrainICs     = zeros(1, length(ALLEEG))*NaN;
 asrFail             = zeros(1, length(ALLEEG));
 icaFail             = zeros(1, length(ALLEEG));
+try
+    parpool;
+catch
+    warning('starting parpool failed. parpool might already be created');
+end
 
-for iDat = 1:length(ALLEEG)
+parfor iDat = 1:length(ALLEEG)
+try
     EEG = ALLEEG(iDat);
     
     processedEEG = [ EEG.filename(1:end-4) '_processed.set' ];
@@ -66,7 +66,11 @@ for iDat = 1:length(ALLEEG)
         % check channel locations
         % remove non-EEG channels
         disp('Selecting channels based on type...');
-	dipfit_path = fileparts(which('pop_dipplot'));
+	try
+	    dipfit_path = fileparts(which('pop_dipplot'));
+	catch
+	    dipfit_path = fullfile(root_path, 'eeglab','plugins','dipfit4.0');
+        end
         chanfile = [dipfit_path '/standard_BEM/elec/standard_1005.elc'];
         if ~exist(chanfile,'file')
             chanfile = '/home/octave/eeglab/plugins/dipfit4.0/standard_BEM/elec/standard_1005.elc';
@@ -107,21 +111,30 @@ for iDat = 1:length(ALLEEG)
                 %if ~isempty(EEG.chanlocs) && isfield(EEG.chanlocs, 'X') && ~isempty(EEG.chanlocs(1).X)
                 try
                     EEG = pop_reref(EEG, []);
-                    EEG = pop_runica(EEG, 'icatype','picard','options',{'pca',EEG.nbchan-1});
+                    EEG = pop_runica(EEG, 'icatype','binica','options',{'pca',EEG.nbchan-1});
                     EEG = pop_iclabel(EEG,'default');
                     EEG = pop_icflag(EEG,[0.6 1;NaN NaN;NaN NaN;NaN NaN;NaN NaN;NaN NaN;NaN NaN]);
                     
 		    disp(fullfile(EEG.filepath, processedEEG));
                     pop_saveset(EEG, fullfile(EEG.filepath, processedEEG));
-                catch
+                catch ME
                     l = lasterror
+		    s=dbstack;
+		    fid = fopen(sprintf('%s/processing-log/%s_err.txt',root_path,dsname),'a');
+		    fprintf(fid, 'File %s, line %d, %s: %s\n', EEG.filename, s(1).line, ME.identifier, ME.message);
+		    fclose(fid);
                     for iL = 1:length(l.stack)
                         l.stack(iL)
                     end
                     icaFail(iDat) = 1;
                 end
-            catch
+            catch ME
                 l = lasterror
+		s=dbstack;
+		fid = fopen(sprintf('%s/processing-log/%s_err.txt',root_path,dsname),'a');
+		fprintf(fid, 'File %s, line %d, %s: %s\n', EEG.filename, s(1).line, ME.identifier, ME.message);
+		fclose(fid);
+
                 for iL = 1:length(l.stack)
                     l.stack(iL)
                 end
@@ -133,8 +146,9 @@ for iDat = 1:length(ALLEEG)
     else
         % do not load binary data
         fprintf('Loading dataset %s\n', processedEEG);
-        EEG = load('-mat', fullfile(EEG.filepath, processedEEG));
-        EEG = EEG.EEG;
+	EEG = pop_loadset(fullfile(EEG.filepath, processedEEG));
+        %EEG = load('-mat', fullfile(EEG.filepath, processedEEG));
+        %EEG = EEG.EEG;
     end
     
     % get results
@@ -144,6 +158,13 @@ for iDat = 1:length(ALLEEG)
         percentChanRejected(iDat) = 1-EEG.nbchan/EEG.etc.orinbchan;
         percentDataRejected(iDat) = 1-EEG.pnts/EEG.etc.oripnts;
     end
+catch ME
+	s=dbstack;
+	fid = fopen(sprintf('%s/processing-log/%s_err.txt',root_path,dsname),'a');
+	fprintf(fid, 'File %s, line %d, %s: %s\n', EEG.filename, s(1).line, ME.identifier, ME.message);
+	fclose(fid);
+
+end
 end
 
 %nChans
@@ -202,3 +223,4 @@ if fid ~= -1
     fprintf(fid, '%s\n', jsonwrite(res));
     fclose(fid);
 end
+

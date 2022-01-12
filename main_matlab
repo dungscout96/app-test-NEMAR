@@ -1,0 +1,20 @@
+#!/bin/bash
+
+#SBATCH --partition=compute
+#SBATCH --nodes=1
+#SBATCH --mem=128G
+#SBATCH --account=csd403
+#SBATCH --no-requeue
+#SBATCH -t 06:00:00
+#SBATCH --ntasks-per-node=1
+
+module load matlab
+code_dir="/home/dtyoung/app-test-NEMAR"
+#parse config.json for input parameters (here, we are pulling "t1")
+data_dir="/expanse/projects/nemar/openneuro" #$(jq -r .dir config-dataqual.json)
+datasetID="$1" #$(jq -r .dataset config-dataqual.json)
+out_dir="$data_dir/processed" #$(jq -r .outdir config-dataqual.json)
+data_path="$data_dir/$datasetID"
+echo $data_path
+echo $out_dir
+matlab -nodisplay -r "bids_dataqual_matlab('$data_path', '$out_dir', '$code_dir');"
