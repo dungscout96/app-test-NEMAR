@@ -66,10 +66,10 @@ try
         % check channel locations
         % remove non-EEG channels
         disp('Selecting channels based on type...');
-	try
-	    dipfit_path = fileparts(which('pop_dipplot'));
-	catch
-	    dipfit_path = fullfile(root_path, 'eeglab','plugins','dipfit4.0');
+        try
+            dipfit_path = fileparts(which('pop_dipplot'));
+        catch
+            dipfit_path = fullfile(root_path, 'eeglab','plugins','dipfit4.0');
         end
         chanfile = [dipfit_path '/standard_BEM/elec/standard_1005.elc'];
         if ~exist(chanfile,'file')
@@ -107,22 +107,56 @@ try
                     'BurstCriterion',20,'WindowCriterion',0.25,'BurstRejection','on','Distance','Euclidian','WindowCriterionTolerances',[-Inf 7] );
                 EEG = EEGTMP;
 
+		        % save EEGPLOT
+                % ------------
+                bounds = strmatch('boundary', { EEG.event.type });
+                startLat = 1;
+                if ~isempty(bounds)
+                    boundLat = [ EEG.event(bounds).latency ];
+                    diffLat = diff(boundLat);
+                    indLat = find(diffLat > EEG.srate*2); % 2 seconds of good data
+                    if ~isempty(indLat)
+                        startLat = boundLat(indLat(1));
+                    end
+                end
+                eegplot(EEG.data(:,startLat:startLat+EEG.srate*2), 'srate', EEG.srate, ...
+                    'winlength', 2, 'eloc_file', EEG.chanlocs, 'noui', 'on');
+                textsc(['Dataset ' EEG.filename ' (2 seconds)' ], 'title');
+                h = findall(gcf,'-property','FontName');
+                set(h,'FontName','San Serif');
+                print(gcf,'-dsvg',fullfile(EEG.filepath, [ EEG.filename(1:end-4) '_eegplot.svg' ]))
+                close
+
                 % run ICA and IC label
                 %if ~isempty(EEG.chanlocs) && isfield(EEG.chanlocs, 'X') && ~isempty(EEG.chanlocs(1).X)
                 try
-                    EEG = pop_reref(EEG, []);
-                    EEG = pop_runica(EEG, 'icatype','binica','options',{'pca',EEG.nbchan-1});
+		            EEG = pop_reref(EEG, []);
+                    amicaout = fullfile(EEG.filepath, 'amicaout');
+                    if exist(amicaout, 'dir')
+                        EEG = eeg_loadamica(EEG, fullfile(EEG.filepath, 'amicaout'));
+                    else
+                        EEG = pop_runamica(EEG,'numprocs',1, 'do_reject', 1, 'numrej', 5, 'rejint', 4,'rejsig', 3,'rejstart', 1, 'pcakeep',EEG.nbchan-1); % Computing ICA with AMICA
+                        EEG = eeg_loadamica(EEG, fullfile(EEG.filepath, 'amicaout'));
+                        % rmdir( fullfile(EEG.filepath, 'amicaout'), 's');
+                    end
+                    % EEG = pop_runica(EEG, 'icatype','picard','options',{'pca',EEG.nbchan-1});
                     EEG = pop_iclabel(EEG,'default');
                     EEG = pop_icflag(EEG,[0.6 1;NaN NaN;NaN NaN;NaN NaN;NaN NaN;NaN NaN;NaN NaN]);
-                    
-		    disp(fullfile(EEG.filepath, processedEEG));
+
+                    % Save IC Label image
+                    % -------------------
+                    pop_viewprops( EEG, 0, [1:min(EEG.nbchan-1,32)], {'freqrange', [2 64]}, {}, 1, 'ICLabel' )
+                    print(gcf,'-dsvg','-noui',fullfile(EEG.filepath,[ EEG.filename(1:end-4) '_icamaps.svg' ]))
+                    close
+
+                    disp(fullfile(EEG.filepath, processedEEG));
                     pop_saveset(EEG, fullfile(EEG.filepath, processedEEG));
                 catch ME
                     l = lasterror
-		    s=dbstack;
-		    fid = fopen(sprintf('%s/processing-log/%s_err.txt',root_path,dsname),'a');
-		    fprintf(fid, 'File %s, line %d, %s: %s\n', EEG.filename, s(1).line, ME.identifier, ME.message);
-		    fclose(fid);
+                    s=dbstack;
+                    fid = fopen(sprintf('%s/processing-log/%s_err.txt',root_path,dsname),'a');
+                    fprintf(fid, 'File %s, line %d, %s: %s\n', EEG.filename, s(1).line, ME.identifier, ME.message);
+                    fclose(fid);
                     for iL = 1:length(l.stack)
                         l.stack(iL)
                     end
@@ -130,10 +164,10 @@ try
                 end
             catch ME
                 l = lasterror
-		s=dbstack;
-		fid = fopen(sprintf('%s/processing-log/%s_err.txt',root_path,dsname),'a');
-		fprintf(fid, 'File %s, line %d, %s: %s\n', EEG.filename, s(1).line, ME.identifier, ME.message);
-		fclose(fid);
+                s=dbstack;
+                fid = fopen(sprintf('%s/processing-log/%s_err.txt',root_path,dsname),'a');
+                fprintf(fid, 'File %s, line %d, %s: %s\n', EEG.filename, s(1).line, ME.identifier, ME.message);
+                fclose(fid);
 
                 for iL = 1:length(l.stack)
                     l.stack(iL)
@@ -146,17 +180,32 @@ try
     else
         % do not load binary data
         fprintf('Loading dataset %s\n', processedEEG);
-	EEG = pop_loadset(fullfile(EEG.filepath, processedEEG));
+	    EEG = pop_loadset(fullfile(EEG.filepath, processedEEG));
         %EEG = load('-mat', fullfile(EEG.filepath, processedEEG));
         %EEG = EEG.EEG;
     end
-    
     % get results
+    if contains(EEG.filename, 'processed')
+        result_basename = erase(EEG.filename, '_processed.set');
+    else
+        result_basename = erase(EEG.filename, '.set');
+    end
     if ~asrFail(iDat) && ~icaFail(iDat)
-        percentBrainICs(iDat) = sum(EEG.reject.gcompreject)/(EEG.nbchan-1);
-        nChans(iDat) = EEG.etc.orinbchan;
-        percentChanRejected(iDat) = 1-EEG.nbchan/EEG.etc.orinbchan;
-        percentDataRejected(iDat) = 1-EEG.pnts/EEG.etc.oripnts;
+        numChans = EEG.etc.orinbchan;
+        goodChans = EEG.nbchan/EEG.etc.orinbchan;
+        goodData = EEG.pnts/EEG.etc.oripnts;
+        goodICA = sum(EEG.reject.gcompreject)/(EEG.nbchan-1);
+        percentBrainICs(iDat) = goodICA;
+        nChans(iDat) = numChans;
+        percentChanRejected(iDat) = 1-goodChans;
+        percentDataRejected(iDat) = 1-goodData;
+        save_dataqual_results(EEG.filepath, result_basename, asrFail(iDat), icaFail(iDat), numChans, goodChans, goodData, goodICA)
+    else
+        numChans = EEG.etc.orinbchan;
+        goodChans = nan;
+        goodData = nan;
+        goodICA = nan;
+        save_dataqual_results(EEG.filepath, results_basename, asrFail(iDat), icaFail(iDat), numChans, goodChans, goodData, goodICA)
     end
 catch ME
 	s=dbstack;
@@ -223,4 +272,18 @@ if fid ~= -1
     fprintf(fid, '%s\n', jsonwrite(res));
     fclose(fid);
 end
+
+function save_dataqual_results(filepath, filename, asrStatus, icaStatus, numChans, goodChans, goodData, goodICA)
+    res.nChans    = sprintf('%d', numChans);
+    res.goodChans = sprintf('%1.1f', goodChans*100);
+    res.goodData  = sprintf('%1.1f', goodData*100);
+    res.goodICA   = sprintf('%1.1f', goodICA*100);
+    res.asrFail   = sprintf('%d', asrStatus);
+    res.icaFail   = sprintf('%d', icaStatus);
+    fid = fopen(fullfile(filepath, [filename '_dataqual.json'] ), 'w');
+    if fid ~= -1
+        fprintf(fid, '%s\n', jsonwrite(res));
+        fclose(fid);
+    end
+
 
